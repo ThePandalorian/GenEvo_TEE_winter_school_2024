@@ -31,7 +31,7 @@ I will introduce you to modelling by considering an intriguing observation from 
 
 **Instructor**: Hanna Kokko
 
-On day two, we will take our elephant model and make it more realistic. We will ask you to think about the simplifying assumptions made in Workshop 1, and whether or not they adequately capture the life history of a long-lived organism. We will then explicitly incorporate some life history into the model, and explore how this changes the predictions the model produces.
+On day two, we will take our elephant model and make it more realistic. I will ask you to think about the simplifying assumptions made in Workshop 1, and whether or not they adequately capture the life history of a long-lived organism. We will then explicitly incorporate some life history into the model, and explore how this changes the predictions the model produces.
 
 ## Workshop 3: Responding to change
 
