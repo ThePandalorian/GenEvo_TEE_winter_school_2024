@@ -25,16 +25,26 @@ If you're already familiar with workflows like this, that's great! But if this s
 
 **Instructor**: Tom Keaney
 
+I will introduce you to modelling by considering an intriguing observation from Gorongosa national park in Mozambique. There, the African Elephant population has shown rapid evolution of tusklessness from 1970 to the mid-2010s. Together, we will build a simple population genetic model to describe the evolution of tusklessness, while making many simplifying assumptions. As we progress through the exercise, we will introduce general modelling guidelines, explain why models are valuable in the first place, and hopefully make clear the strengths and weaknesses of adopting a relatively simple approach. 
+
 ## Workshop 2: Continuous Elephants
 
 **Instructor**: Hanna Kokko
+
+On day two, we will take our elephant model and make it more realistic. We will ask you to think about the simplifying assumptions made in Workshop 1, and whether or not they adequately capture the life history of a long-lived organism. We will then explicitly incorporate some life history into the model, and explore how this changes the predictions the model produces.
 
 ## Workshop 3: Responding to change
 
 **Instructor**: Hanna ten Brink
 
+All organisms must cope with environmental change, which can be either predictable (e.g., the daily cycle of sunrise and sunset) or unpredictable (e.g., next week's weather). These changes occur on different timescales, from rapid changes (e.g., a rain event) to gradual trends (e.g., seasonal change). First, I will introduce you to the different strategies or response modes that organisms adopt to deal with such changes. We’ll together discuss under which conditions each strategy is adaptive, and when it might not be. Next, we will brainstorm the key components needed to build a model to test these ideas. You’ll then work with an existing model to investigate our hypothesis on the conditions under which each response mode is likely to evolve.  
+
+This model will focus on phenotypic evolution, which is one approach to understand how organisms adapt to change. However, this approach simplifies reality by leaving out the regulatory mechanisms that underlie these evolutionary responses. To address this, I will briefly introduce gene regulatory network models as a way to study evolutionary responses to changing environments. While we won’t have time for hands-on work on this topic, this introduction will give you a start for further exploration on your own.
+
 ## Workshop 4: Ageing Dolphins
 
 **Instructor**: Victor Ronget
+
+It is well known that individuals in the same population can exhibit marked heterogeneity in terms of vital rates (this is a demography term for things like birth and death rates). One of the most important factors in this demographic heterogeneity is age. We expect, for example, changes in mortality and fertility rates during juvenile growth or for older senescent individuals. We will first learn how to accurately describe these age-specific changes in mortality and fertility using life table analyses from several mammalian demographic datasets. We will discuss the modeling choices and assumptions associated with these methods. We will then use these age-specific trajectories to build population projection models ranging from discrete to continuous time scales, with particular emphasis on using these models to describe the main evolutionary theories of aging.
 
 
