@@ -4,7 +4,7 @@ Instructors: Hanna Kokko, Thomas Keaney, Hanna ten Brink and Victor Ronget
 
 The purpose of this course is to introduce mathematical modelling to researchers that primarily conduct empirical research in the fields of ecology, evolution and molecular biology. The course should also be valuable to young theoreticians looking to expand their modelling toolkit. 
 
-This github repository is the place you should look for all online resources associated with the school. Materials associated with each workshop can be downloaded from here, by 'cloning' the repository, or downloading it in ZIP form. To do this, look for the green `code` icon in the top right of this page. Click and copy the web URL to clone, or simply download the ZIP. 
+This github repository is the place you should look for all online resources associated with the school. Materials associated with each workshop can be downloaded from here, by 'cloning' the repository, or downloading it in ZIP form. To do this, look for the green `code` icon on the top right of this page. Click and copy the web URL to clone, or simply download the ZIP. 
 
 ## Required software 
 
