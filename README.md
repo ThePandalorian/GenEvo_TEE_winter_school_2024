@@ -13,4 +13,4 @@ The school is divided into four workshops, each led by a different instructor. T
 1. Have installed a recent version of R: download it [here](https://cran.rstudio.com/)
 2. Have R-studio installed: download it [here](https://posit.co/download/rstudio-desktop/)
 
-`R` is open source, which, among other things, means it's completely free to download. 
+`R` is open source, which, among other things, means it's completely free to download. If you have any trouble with this, let Tom know on the Sunday evening and he'll give you a hand. 
