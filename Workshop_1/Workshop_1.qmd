@@ -28,7 +28,7 @@ execute:
 
 # Step 0: Quarto
 
-Quarto is a mix of a text editor like word or LATEX and a `.R` file. You can write notes in plain text outside code blocks. Headings are produced by hashtags.
+Quarto is a mix of a text editor like word or LaTeX and a `.R` file. You can write notes in plain text outside code blocks. Headings are produced by hashtags.
 
 If you want to write R code, you'll need to open a code block. That looks like this
 
@@ -46,10 +46,10 @@ If you don't have them already, `tidyverse`, `patchwork` and `geomtextpath` need
 ```{r}
 # code is commented out because I already have them installed
 
-# options(timeout = 1000) # you need this to install stuff on slow networks
+#options(timeout = 1000) # you need this to install stuff on slow networks
 #install.packages(c("tidyverse", "patchwork"))
 
-# not on CRAN, so needs to be installed straight from github                
+# not on CRAN, so needs to be installed straight from github              
 #install.packages("remotes")
 #remotes::install_github("AllanCameron/geomtextpath")
 ```
