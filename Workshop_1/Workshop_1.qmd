@@ -154,7 +154,7 @@ top / bottom
 
 ## Plotting the analytics
 
-Using matrix algebra, we just found that when h >= 0.5 then there are $\frac{2}{1-h}$ tuskless females for every tusked female at equilibrium (you can think of this as in the distant future). We can plot this like so:
+Using matrix algebra, we just found that when h >= 0.5 then there are $2 - 1/h$ tuskless females for every tusked female at equilibrium (you can think of this as in the distant future). We can plot this like so:
 
 ```{r}
 # wrangle
