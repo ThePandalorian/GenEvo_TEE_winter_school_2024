@@ -1,0 +1,878 @@
+---
+title: "Winter school: Elephant evolution - Models 1 to 3"
+editor: source
+format:
+  html:
+      theme: Minty # browse these here: https://quarto.org/docs/output-formats/html-themes.html
+      page-layout: full
+      #max-width: 1800px # adjust if your plots don't fit or you want more or less whitespace
+      toc: true # do you want a table of contents, by default it floats as you scroll
+      toc-location: left # where should it be displayed
+      toc-title: "Sections"
+      code-fold: show # fold code up for neater display
+      code-tools: true # add a button at the top of doc to show all code
+      code-summary: "Show/hide the code"
+      code-line-numbers: true
+      smooth-scroll: true
+      embed-resources: true # output doc contains all info needed to display html
+      #fig-format: png # this is finicky to the point that I'm not sure it works
+      lightbox: true
+      #page-layout: full
+# this changes what parts of your output/code are shown in the report
+execute:
+      warning: false
+      error: false
+      echo: TRUE
+---
+
+# Intro
+
+This document is split into three different sections: Models 1, 2 and 3. Each runs independently, as long as you have all the packages loaded.
+
+# Setup R
+
+If you don't have them already, `tidyverse`, `patchwork` and `geomtextpath` need to be installed. For those unfamiliar with `R`, you only need to do this once per computer. 
+
+```{r}
+# code is commented out because I already have them installed
+
+# options(timeout = 1000) # you need this to install stuff on slow connections
+#install.packages(c("tidyverse", "patchwork", "geomtextpath"))
+
+```
+
+Once installed, they have to be loaded each session using the `library` function.
+
+```{r}
+
+# load packages 
+library(tidyverse) # for efficient data wrangling
+library(patchwork) # for combining plots
+library(geomtextpath) # for text in ggplots 
+```
+
+# Workshop 1
+
+## Model 1
+
+### Run the model
+
+```{r}
+max_time <- 50 # how much time should we run the model for
+
+# assign a matrix row number to each genotype 
+
+xX <- 1 
+XX <- 2
+XY <- 3 
+
+# create an empty matrix: we'll fill the cells with the model output
+# each row corresponds to a genotype, each column to a point in (discrete) time; in this case, a generation
+
+N <- matrix(NA, nrow = 3, ncol = max_time + 1)
+
+# initialize the population - these are numbers of individuals with each viable genotype
+
+N[, 1] <- c(1, 999, 1000)  
+
+# set parameter values
+
+Fecundity <- 6  # how many offspring per female elephant? (in a lifetime!)
+Sf <- 0.8 # in the absence of hunting, what proportion of females survive to reproduce
+Sm <- 0.8 # in the absence of hunting, what proportion of males survive to reproduce
+h <- 0.6 # how much is survival decreased by hunting
+
+# find the prop of surviving individuals when hunting occurs
+
+sf <- Sf * (1 - h)
+sm <- Sm * (1 - h)
+
+# run the model and fill the empty matrix with genotype numbers 
+# because there's only one viable male genotype, there are very few parental genotype combinations we need to consider
+
+for (t in 1:max_time) {
+  N[xX, t + 1] <- Fecundity * (N[xX, t] / 4) * Sf
+  N[XX, t + 1] <- Fecundity * (N[xX, t] / 4 + N[XX, t] / 2) * sf
+  N[XY, t + 1] <- Fecundity * (N[xX, t] / 4 + N[XX, t] / 2) * sm
+}
+
+```
+
+### Plot the results when h = 0.6
+
+```{r}
+
+# ggplot doesn't play nice with matrices, so we need to wrangle the data into a plottable format.
+
+plotting_data <- 
+  N %>% # you can run these lines step by step to see what each does
+  as.data.frame() %>% 
+  as_tibble() %>% 
+  rownames_to_column() %>% 
+  pivot_longer(-rowname) %>% 
+  rename(Genotype = rowname,
+         Generation = name,
+         N_adults = value) %>% 
+  mutate(Genotype = case_when(Genotype == 1 ~ "xX",
+                              Genotype == 2 ~ "XX",
+                              Genotype == 3 ~ "XY"),
+         Generation = as.numeric(str_remove(Generation, "V")))
+  
+p1 <-
+  plotting_data %>% 
+  filter(Genotype != "XY") %>% # if male survival = female survival there's no need to plot XY
+  ggplot(aes(x = Generation, y = N_adults, colour = Genotype)) +
+  geom_point(size = 2.5) +
+  labs(y = "Number of adults") +
+  theme_bw()
+
+p2 <-
+  plotting_data %>% 
+  filter(Genotype != "XY") %>% # if male survival = female survival there's no need to plot XY
+  ggplot(aes(x = Generation, y = log(N_adults), colour = Genotype)) +
+  geom_point(size = 2.5) +
+  labs(y = "log(Number of adults)") +
+  theme_bw()
+
+p3 <-
+  plotting_data %>% 
+  # More wrangling needed - make each genotype into a column  
+  pivot_wider(names_from = "Genotype", values_from = "N_adults") %>% 
+  # calc prop tuskless
+  mutate(prop_tuskless_females = xX / (XX + xX)) %>% 
+  # plot
+  ggplot(aes(x = Generation, y = prop_tuskless_females)) +
+  geom_point(size = 2.5) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(y = "Prop. tuskless females") +
+  theme_bw()
+
+p4 <-
+  plotting_data %>% 
+  # More wrangling needed - make each genotype into a column  
+  pivot_wider(names_from = "Genotype", values_from = "N_adults") %>% 
+  # calc prop tuskless
+  mutate(prop_x = (xX / 2) / ((xX / 2) + XX + (XY / 2))) %>% 
+  # plot
+  ggplot(aes(x = Generation, y = prop_x)) +
+  geom_point(size = 2.5) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(y = "Prop. mutant x") +
+  theme_bw()
+
+top <- (p1 + p2) + plot_layout(guides = "collect")
+
+bottom <- p3 + p4
+
+top / bottom
+
+```
+
+With the maths done, we can plot the effects of hunting on the equilibrium frequency of tusklessness in females
+
+```{r}
+# wrangle
+p5 <-
+tibble(prop_life_lost = seq(from = 0.5, to = 1, length.out = 500)) %>% 
+  mutate(prop_tuskless_females = 2 - 1/prop_life_lost) %>% 
+  # plot
+  ggplot(aes(x = prop_life_lost,
+             y = prop_tuskless_females)) +
+  geom_line(linewidth = 1) +
+  labs(x = 'Proportion of life lost (of tuskeds)',
+       y = 'Prop. tuskless females',
+       title = "Model 1: far future") +
+  scale_x_continuous(limits = c(0, 1.01), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0, 1), expand = c(0.0, 0)) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+  
+p5
+```
+
+# Workshop 2
+
+## Model 2
+
+### Build the function to run the model
+
+This block contains the function. Parameter values (for p, mu, a, N, max_time) are assigned in the next code block, which runs the function.
+
+```{r}
+
+model2 <- function(p, mu, a, N, max_time) {
+  # Define indices
+  xX <- 1 # tuskless females
+  XX <- 2 # tusked females
+  XY <- 3 # males
+  
+  # Initialize the population: here we are assuming we have 1 mutant among the females
+  C <- c(1, 
+         N - 1, 
+         N * (mu[XX] / mu[XY]))
+  
+  # Define mortalities combining natural and human-caused mortalities (p stands for poaching)
+  
+  # if e.g. p = 3, then for each tusked female natural mortality event there are 3 poaching-related events, when mu = 1
+  mu_t <- mu[xX]       # Tuskless females
+  mu_T <- mu[XX] + p   # Tusked females
+  mu_m <- mu[XY] + p   # Males
+  
+  # Time vector with 200 points between 0 and max_time
+  t <- seq(0, max_time, length.out = 200)
+  
+  # Equations for xX and XX
+  # a is a single value, e.g. 1.2 indicates that one does get a bit faster at producing the next offspring if an embryo died
+  n_xX <- 
+    C[xX] * exp((a / 4 - mu_t) * t)
+  
+  n_XX <- 
+    a * C[xX] * (exp((a / 4 - mu_t) * t) - exp((1 / 2 - mu_T) * t)) /
+    (-2 + a - 4 * mu_t + 4 * mu_T) + C[XX] * exp((1 / 2 - mu_T) * t)
+  
+  # Computation for XY
+  complicated_numerator <- 
+    -a * exp(-mu_m * t) * 
+    (a * (-exp((1 / 2 - mu_T + mu_m) * t) + 2 * (mu_T - mu_m) + 
+           exp(1 / 4 * (a - 4 * mu_t + 4 * mu_m) * t) * (1 - 2 * mu_T + 2 * mu_m)) - 
+      4 * ((1 + 2 * mu_t - 2 * mu_T) * (mu_T - mu_m) + 
+             exp((1 / 2 - mu_T + mu_m) * t) * (-mu_t + mu_m) + 
+             exp(1 / 4 * (a - 4 * mu_t + 4 * mu_m) * t) * (mu_t - mu_T) * (1 - 2 * mu_T + 2 * mu_m)))
+  
+  complicated_denominator <- 
+    (-2 + a - 4 * mu_t + 4 * mu_T) * 
+    (-1 + 2 * mu_T - 2 * mu_m) *
+    (a - 4 * mu_t + 4 * mu_m)
+  
+  coefficient_xX <- complicated_numerator / complicated_denominator
+  
+  coefficient_XX <- 
+    (exp(((2 - 4 * mu_T) * t) / 4 + mu_m * t) - 1) /
+    (1 - 2 * mu_T + 2 * mu_m)
+  
+  # Equation for XY
+  n_XY <- coefficient_xX * C[xX] + exp(-mu_m * t) * (coefficient_XX * C[XX] + C[XY])
+  
+  # Proportion of tuskless females at each time step
+  proportion_tuskless <- n_xX / (n_xX + n_XX)
+  
+  # Analytical prediction
+  analytical_prediction <- 1 - a / (2 * (a - 1 + 2 * (mu_T - mu_t)))
+  
+  # Determine if tusklessness will spread
+  spread_condition <- ifelse(a - 4 * mu_t + 4 * mu_T > 2, 1, 0)
+  
+  # Calculate lifespan lost and final proportions
+  Lifespan_lost <- 1 - (mu[XX] / mu_T)
+  
+  End_proportion_infinite <- analytical_prediction
+  
+  End_proportion_tmax <- n_xX[length(t)] / (n_xX[length(t)] + n_XX[length(t)])
+  
+  # Return results as a list
+  list(
+    time = t,
+    proportion_tuskless = proportion_tuskless,
+    number_xX = n_xX,
+    number_XX = n_XX,
+    number_XY = n_XY,
+    spread_condition = spread_condition,
+    Lifespan_lost = Lifespan_lost,
+    End_proportion_tmax = End_proportion_tmax,
+    End_proportion_infinite = End_proportion_infinite
+  )
+}
+```
+
+### Run the function
+
+```{r}
+
+# Parameters
+p <- 10^(seq(-3, 3, length.out = 2000))
+mu <- c(0.01, 0.05, 0.1, 0.25, 0.5)
+a <- 1
+N <- 10000
+max_time = 50
+
+# Initialize matrices to store results
+S <- matrix(NA, nrow = length(p), ncol = length(mu))  # S: spread condition
+LL <- matrix(NA, nrow = length(p), ncol = length(mu)) # LL: Lifespan lost
+Et <- matrix(NA, nrow = length(p), ncol = length(mu)) # Et: Endproportion t_max
+Ei <- matrix(NA, nrow = length(p), ncol = length(mu)) # Ei: Endproportion infinite
+
+# Run the function in nested loops
+for (i in seq_along(p)) {
+  for (j in seq_along(mu)) {
+    result <- model2(p[i], mu[j] * c(1, 1, 1), a, N, max_time)
+    S[i, j] <- result$spread_condition
+    LL[i, j] <- result$Lifespan_lost
+    Et[i, j] <- result$End_proportion_tmax
+    Ei[i, j] <- result$End_proportion_infinite
+  }
+}
+
+```
+
+### Plot the results
+
+```{r}
+
+# plot one run
+
+# in this example, nearly all deaths happen because of poaching (of tuskeds)
+
+example_results <- model2(p = 1, mu = 0.01 * c(1, 1, 1), a, N, max_time)
+
+# wrangle into a ggplot compatible format
+
+p6 <-
+  tibble(time = example_results$time,
+       `Tuskless females` = example_results$number_xX,
+       `Tusked females` = example_results$number_XX,
+       Males = example_results$number_XY) %>%
+  pivot_longer(cols = 2:4, names_to = "Phenotype", values_to = "Individuals") %>% 
+  filter(Phenotype != "Males") %>% 
+  # plot
+  ggplot(aes(x = time, y = Individuals, group = Phenotype, colour = Phenotype)) +
+  geom_line(linewidth = 1.2) +
+  labs(x = "Time",
+       y = "Population size") +
+  scale_y_continuous(expand = c(0.01, 0)) +
+  scale_x_continuous(limits = c(0, 51), expand = c(0, 0)) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+p7 <-
+  tibble(time = example_results$time,
+       `Tuskless females` = example_results$number_xX,
+       `Tusked females` = example_results$number_XX,
+       Males = example_results$number_XY) %>%
+  pivot_longer(cols = 2:4, names_to = "Phenotype", values_to = "Individuals") %>% 
+  filter(Phenotype != "Males") %>% 
+  # plot
+  ggplot(aes(x = time, y = log(Individuals), group = Phenotype, colour = Phenotype)) +
+  geom_line(linewidth = 1.2) +
+  labs(x = "Time",
+       y = "log(Population size)") +
+  scale_y_continuous(expand = c(0.01, 0)) +
+  scale_x_continuous(limits = c(0, 51), expand = c(0, 0)) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+p8 <-
+tibble(time = example_results$time,
+       prop_tuskless_females = example_results$proportion_tuskless) %>% 
+  # plot
+  ggplot(aes(x = time, y = prop_tuskless_females)) +
+  geom_line(linewidth = 1.2) +
+  labs(x = "Time",
+       y = "Prop. tuskless females") +
+  scale_y_continuous(limits = c(0, 1), expand = c(0.01, 0)) +
+  scale_x_continuous(limits = c(0, 51), expand = c(0, 0)) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+p9 <-
+tibble(time = example_results$time,
+       `Tuskless females` = example_results$number_xX,
+       `Tusked females` = example_results$number_XX,
+       Males = example_results$number_XY) %>% 
+  mutate(prop_x = (`Tuskless females` / 2) / ((`Tuskless females` / 2) + (`Tusked females`) + (Males/2))) %>% 
+  # plot
+  ggplot(aes(x = time, y = prop_x)) +
+  geom_line(linewidth = 1.2) +
+  labs(x = "Time",
+       y = "Prop. mutant x") +
+  scale_y_continuous(limits = c(0, 1), expand = c(0.01, 0)) +
+  scale_x_continuous(limits = c(0, 51), expand = c(0, 0)) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+top_2 <-
+  p6 + p7 + plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+bottom_2 <- p8 + p9
+
+top_2 / bottom_2 + plot_annotation(title = "p = 1, a = 1, mu = 0.01") &
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+Now lets plot over a large parameter space
+
+```{r, fig.width=8, fig.height=4}
+# Parameter space results
+
+names <- data.frame("vars"=c("V1", "V2", "V3", "V4", "V5"),
+                   "labels"=as.character(mu))
+
+model_2_output <-
+  bind_cols(
+    LL %>% 
+      as.data.frame() %>% 
+      rename_at(vars(names$vars), ~ names$labels) %>% 
+      pivot_longer(cols = everything(),
+                   names_to = "mu",
+                   values_to = "Prop_lifespan_lost") %>% 
+      mutate(mu = as.numeric(mu),
+             mu_labels = paste("mu =", mu)),
+    
+    Et %>% 
+      as.data.frame() %>% 
+      rename_at(vars(names$vars), ~ names$labels) %>% 
+      pivot_longer(cols = everything(),
+                   names_to = "mu",
+                   values_to = "Prop_tuskless_females_finite") %>% 
+      select(-mu),
+    
+    Ei %>% 
+       as.data.frame() %>% 
+      rename_at(vars(names$vars), ~ names$labels) %>% 
+      pivot_longer(cols = everything(),
+                   names_to = "mu",
+                   values_to = "Prop_tuskless_females_far_future") %>% 
+      select(-mu)
+  )
+
+p10 <- 
+  model_2_output %>% 
+  ggplot(aes(x = Prop_lifespan_lost, y = Prop_tuskless_females_finite, 
+             label = mu_labels, group = mu_labels)) +
+  geom_textline(hjust = 0.8, linewidth = 0.6, size = 3.5) +
+  labs(x = "Proportion of lifespan lost (in tuskeds)",
+       y = "Prop. tuskless females",
+       title = "Model 2: Finite end") +
+  scale_y_continuous(limits = c(0, 1), expand = c(0.001, 0)) +
+  scale_x_continuous(limits = c(0, 1), expand = c(0, 0)) +
+  theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+p11 <- 
+  model_2_output %>% 
+  ggplot(aes(x = Prop_lifespan_lost, y = Prop_tuskless_females_far_future,
+             label = mu_labels, group = mu_labels)) +
+  geom_textline(hjust = 0.3, linewidth = 0.6, size = 3.5) + 
+  # uncomment to plot finite with far future
+  #geom_line(aes(y = Prop_tuskless_females_finite), linetype = 2) +
+  labs(x = "Proportion of life lost (in tuskeds)",
+       y = "Prop. tuskless females",
+       title = "Model 2: Far future") +
+  scale_y_continuous(limits = c(0, 1), expand = c(0.001, 0)) +
+  scale_x_continuous(limits = c(0, 1), expand = c(0, 0)) +
+  theme_bw()  + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+Model_2_grand_results <- p10 + p11  # make your plotting pane bigger to get the labelling to look nice
+
+Model_2_grand_results  
+```
+
+## Model 3
+
+### Leslie matrix
+
+Here, we build a function that forms a Leslie matrix from a fecundity vector `F` and survival vector `P` and calculates the growth rate lambda, stable age distribution w, reproductive value v, the matrix L itself, and the sensitivity and elasticity matrices.
+
+```{r}
+
+# If only 1 argument is given, it is interpreted as the whole matrix: e.g. lambda = leslie(A)
+
+# If P equals F in length, the matrix will be of Lefkovich type.
+
+leslie <- function(F, P = NULL, calculate_sens_elas = FALSE) {
+  # If P is provided, we construct the Leslie matrix. Otherwise, F is taken as L.
+  if (!is.null(P)) {
+    n <- length(F)
+    F <- matrix(F, nrow = 1)  # Convert F to a row vector (1 x n)
+    P <- matrix(P, nrow = 1)  # Convert P to a row vector (1 x n)
+    
+    # If P is shorter than F, extend P with a zero at the end
+    if (length(P) < length(F)) {
+      P <- c(P, 0)
+    }
+    
+    # Create the Leslie matrix L
+    L <- matrix(0, nrow = n, ncol = n)
+    L[1, ] <- F  # First row is the fecundity vector F
+    for (i in 2:n) {
+      L[i, i-1] <- P[i-1]  # Subdiagonal is survival rates P
+    }
+    L[n, n] <- P[n]  # Last entry is P(n)
+  } else {
+    # If only one argument is passed, assume F is the Leslie matrix L
+    L <- F
+  }
+  
+  # Eigen decomposition of Leslie matrix L
+  eig_result <- eigen(L)
+  w <- eig_result$vectors[, 1]  # The first eigenvector (stable age distribution)
+  lambda <- eig_result$values[1]  # The first eigenvalue (growth rate)
+  w <- w / sum(w)  # Normalize the eigenvector
+  
+  # Eigen decomposition of L' (transpose of L) to get the reproductive value vector v
+  eig_result_v <- eigen(t(L))
+  v <- eig_result_v$vectors[, 1]  # The first eigenvector (reproductive value)
+  v <- v / (v[1] + .Machine$double.eps)  # Normalize the eigenvector
+  
+  # If requested, calculate Sensitivity and Elasticity matrices
+  Sens <- NULL
+  Elas <- NULL
+  if (calculate_sens_elas) {
+    Sens <- (v %*% t(w)) / (sum(v * w))  # Sensitivity matrix
+    Elas <- L * Sens / lambda  # Elasticity matrix
+  }
+  
+  # Return results as a list
+  result <- list(lambda = lambda,
+                 w = w, 
+                 v = v,
+                 L = L, 
+                 Sens = Sens, 
+                 Elas = Elas)
+  return(result)
+}
+
+# Example usage:
+F <- c(0, 1, 2)  # Fecundity vector
+P <- c(0.5, 0.5)  # Survival vector
+output <- leslie(F, P, calculate_sens_elas = TRUE)
+
+# Access the results
+#output$lambda  # Growth rate
+#output$w       # Stable age distribution
+#output$v       # Reproductive value
+#output$L       # Leslie matrix
+#output$Sens    # Sensitivity matrix (if calculated)
+#output$Elas    # Elasticity matrix (if calculated)
+```
+
+### Calculate vital rates from empirical estimates
+
+```{r}
+# notation of sex (females 2 - mnemonic: they have 2 X chromosomes)
+male <- 1
+female <- 2
+
+x <- 0:60
+mu <- c(0.015, 0.015)
+a <- c(35, 55)
+d <- c(7, 4)
+
+# create an empty matrix to fill
+
+lx <- matrix(NA, nrow = 2, ncol = max(x) + 1)
+s <- matrix(NA, nrow = 2, ncol = max(x) + 1)
+
+lx[male:female, 1] <- 1
+
+# find prop of sex-specific pops alive at ages 0 to 60
+lx[male, 1+x] <- exp(-mu[male]*x+exp(-a[male]/d[male])-exp((x-a[male])/d[male]))
+lx[female, 1+x]=exp(-mu[female]*x+exp(-a[female]/d[female])-exp((x-a[female])/d[female]))
+
+# survival from x-1 to x, from eq4 in de Vries et al 2023
+s[male, ] <- exp(-mu[male]+exp((x-1-a[male])/d[male])-exp((x-a[male])/d[male]))
+s[female, ] <- exp(-mu[female]+exp((x-1-a[female])/d[female])-exp((x-a[female])/d[female]))
+
+F <- numeric(length(s[female, ]))
+
+F[16:length(s[female, ])] <- 0.125 # assume one birth every 4 years (thus one female birth every 8 years)
+
+output <- leslie(F, s[female, ], calculate_sens_elas = FALSE)
+
+# get the relevant outputs
+lambda <- output$lambda
+w_female <- output$w
+
+# now that we have the initial age structure of females, we can try to make one for males too, by using the ratio of survivorship for females and males:
+
+# w=[w'.*(lx(male,:)./lx(female,:)); w'] matlab
+
+# Element-wise multiplication of w_transposed and survival_ratio
+w_male <- t(w_female) * (lx[male, ] / lx[female, ])
+
+w_male <- w_male / sum(w_male)
+
+# If you want to transpose back to a column vector:
+w <- matrix(c(w_female,  w_male), nrow = 2)
+```
+
+Visualise elephant survival 
+
+```{r, fig.width=6.71, fig.height=7.65}
+p12 <-
+  tibble(age = x,
+       Females = lx[female,],
+       Males = lx[male,]) %>%
+  pivot_longer(cols = 2:3, 
+              names_to = "Sex",
+              values_to = "Survivorship") %>% 
+  ggplot(aes(x = age, y = Survivorship, group = Sex, label = Sex)) +
+  geom_textline() +
+  labs(x = "Age") +
+  scale_x_continuous(limits = c(0, 60), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0, 1), expand = c(0.01, 0)) +
+  theme_bw() 
+
+p13 <-
+  tibble(age = x,
+       Females = s[female,],
+       Males = s[male,]) %>%
+  pivot_longer(cols = 2:3, 
+               names_to = "Sex",
+               values_to = "Survival") %>% 
+  ggplot(aes(x = age, y = Survival, group = Sex, label = Sex)) +
+  geom_textline(hjust = 0.8) +
+  labs(x = "Age") +
+  scale_x_continuous(limits = c(0, 60), expand = c(0.01, 0)) +
+  scale_y_continuous(limits = c(0, 1), expand = c(0.01, 0)) +
+  theme_bw() 
+
+p12 / p13
+```
+
+### Build the function to run the model
+
+```{r}
+# If you run gompelephant, you have an initial age distribution for when the poaching can begin
+# assume an initial population of 1000 individuals
+# assume some proportion p of tusked individuals are removed each year 
+# (don't care about sex, but the removals occur among individuals above 10 years age)
+# assume that a single newborn female has the mutation
+
+model3 <- function(h, w, s, hunt_age, maturity_age, p_repr, time){
+  # Define indices
+  xX <- 1 # tuskless females
+  XX <- 2 # tusked females
+  XY <- 3 # males
+  
+  # s (gomp survival) has the first row for males and the 2nd for females.
+  # When we switch to notation where xX is listed 1st, then XX, then XY, this
+  # requires some changes. We use sg to denote genotype specific survival
+  
+  sg <- matrix(0, nrow = 3, ncol = ncol(s))
+  
+  sg[xX, ] <- s[2, ]  # Assign survival data for xX genotype (female survival)
+  sg[XX, ] <- s[2, ]  # Assign survival data for XX genotype (female survival)
+  sg[XY, ] <- s[1, ]  # Assign survival data for XY genotype (male survival)
+  
+  # Additionally, tusked individuals (XY and XX) of at least hunt_age years of age have reduced survival
+
+  sg[XX:XY, hunt_age:ncol(sg)] <- sg[XX:XY, hunt_age:ncol(sg)] * (1 - h)
+  
+  N <- matrix(NaN, nrow = 3, ncol = ncol(w))
+
+  N[XX, ] <- 0.49 * w[1,] * 1000
+  N[XY, ] <- 0.5 * w[2,] * 1000
+  N[xX, ] <- 0.01 * w[1,] * 1000
+  
+  maxt <- time 
+  censusdata <- matrix(NaN, nrow = 3, ncol = maxt)
+  
+  # run model
+  
+  for (t in 1:maxt) {
+    
+    # Collect data
+    censusdata[, t] <- rowSums(N)  # Equivalent to sum(N')'
+    
+    # Initialize new population matrix
+    newN <- matrix(0, nrow = nrow(N), ncol = ncol(N))
+    
+    # XX individuals of age maturity_age or older reproduce with probability p_repr, create half XX and half XY
+    # xX individuals of age maturity_age or older reproduce with probability p_repr, create 1/4 xY which die, 1/4 xX, 1/4 XY, and 1/4 XX
+    
+    newN[xX, 1] <- p_repr * sum(N[xX, maturity_age:ncol(N)]) / 4
+    newN[XX, 1] <- p_repr * sum(N[XX, maturity_age:ncol(N)]) / 2 + p_repr * sum(N[xX, 16:ncol(N)]) / 4
+    newN[XY, 1] <- p_repr * sum(N[XX, maturity_age:ncol(N)]) / 2 + p_repr * sum(N[xX, 16:ncol(N)]) / 4
+    
+    # ageing of previously existing individuals
+    newN[, 2:ncol(N)] <- N[, 1:(ncol(N) - 1)]
+    
+    # then, survival. The tusked ones have an extra hurdle of needing to survive, their survival is multiplied by (1-sh)
+    N <- sg * newN
+  }
+  
+  # Calculate Et (the proportion of xX females in the final time step)
+  Et <- censusdata[xX, ncol(censusdata)] / (censusdata[xX, ncol(censusdata)] + censusdata[XX, ncol(censusdata)])
+  
+    list(
+    Et = Et,
+    sg = sg
+  )
+}
+
+```
+
+### Run the function
+
+```{r}
+  # set parameter space
+h <- seq(0, 1, length.out = 201)
+hunt_age <- 11 # this is 10 in R world
+maturity_age <- 16
+p_repr <- 0.25
+
+# Initialize vectors to store results
+Et_100 <- numeric(length(h))
+LL_100 <- numeric(length(h))
+
+# Loop over hunting penalty values for time = 50
+for (i in 1:length(h)) {
+  
+  # Run the model3 function for each hunting penalty (h)
+  Et_100[i] <- model3(h[i], w, s, hunt_age, maturity_age, p_repr, time = 100)$Et
+  
+  # Modify survival rates based on hunting penalty
+  s_modification <- rep(1, 61)  # create vector of ages
+  s_modification[hunt_age:61] <- 1 - h[i]  # Apply hunting penalty
+  
+  # Calculate modified survival for females (lx_hunted)
+  lx_hunted <- numeric(61)  # Vector to store modified survival values
+  for (j in 1:61) {
+    lx_hunted[j] <- lx[female, j] * prod(s_modification[1:j])
+  }
+  
+  # Calculate the relative loss in survival
+  LL_100[i] <- 1 - sum(lx_hunted) / sum(lx[female, ])
+}
+ 
+# repeat for a long time in future
+
+# Initialize vectors to store results
+Et_10000 <- numeric(length(h))
+LL_10000 <- numeric(length(h))
+
+# Loop over hunting penalty values for time = 50
+for (i in 1:length(h)) {
+  
+  # Run the model3 function for each hunting penalty (h)
+  Et_10000[i] <- model3(h[i], w, s, hunt_age, maturity_age, p_repr, time = 10000)$Et
+  
+  # Modify survival rates based on hunting penalty
+  s_modification <- rep(1, 61)  # create vector of ages
+  s_modification[hunt_age:61] <- 1 - h[i]  # Apply hunting penalty
+  
+  # Calculate modified survival for females (lx_hunted)
+  lx_hunted <- numeric(61)  # Vector to store modified survival values
+  for (j in 1:61) {
+    lx_hunted[j] <- lx[female, j] * prod(s_modification[1:j])
+  }
+  
+  # Calculate the relative loss in survival
+  LL_10000[i] <- 1 - sum(lx_hunted) / sum(lx[female, ])
+}
+   
+```
+
+### Plot the results
+
+First lets add the effect of hunting to our survival plots
+
+```{r, fig.width=6.71, fig.height=7.65}
+# run model 3 with hunting = c(0.25)
+h_example <- 0.1
+
+plotting_sg <- model3(h = h_example, w, s, hunt_age, maturity_age, p_repr, time = 100)$sg
+
+# Modify survival rates based on hunting penalty
+s_modification <- rep(1, 61)  # create vector of ages
+s_modification[hunt_age:61] <- 1 - h_example  # Apply hunting penalty
+# Calculate modified survival for females (lx_hunted)
+lx_hunted_female <- numeric(61)
+lx_hunted_male <- numeric(61)
+
+for (j in 1:61) {
+  lx_hunted_female[j] <- lx[female, j] * prod(s_modification[1:j])
+  lx_hunted_male[j] <- lx[male, j] * prod(s_modification[1:j])
+}
+
+p16 <-
+tibble(age = x,
+       Females = lx[female,],
+       Males = lx[male,],
+       Females_hunted = lx_hunted_female,
+       Males_hunted = lx_hunted_male) %>%
+  pivot_longer(cols = 2:5, 
+               names_to = "Class",
+               values_to = "Survivorship") %>%
+  mutate(Sex = if_else(str_detect(Class, "Females"), "Females", "Males"),
+         Hunting = if_else(str_detect(Class, "hunted"), "Hunted", "Not hunted")) %>% 
+  ggplot(aes(x = age, y = Survivorship, colour = Sex, linetype = Hunting)) +
+  geom_line(linewidth = 0.8) +
+  labs(x = "Age",
+       title = "Hunting penalty = 0.1") +
+  scale_linetype_manual(values=c(3, 1)) +
+  scale_x_continuous(limits = c(0, 60), expand = c(0.01, 0)) +
+  scale_y_continuous(limits = c(0, 1), expand = c(0.0, 0)) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+p17 <-
+  tibble(age = x,
+         Females = s[female,],
+         Males = s[male,],
+         Females_hunted = plotting_sg[2,],
+         Males_hunted = plotting_sg[3,]) %>%
+  pivot_longer(cols = 2:5, 
+               names_to = "Class",
+               values_to = "Survival") %>%
+  mutate(Sex = if_else(str_detect(Class, "Females"), "Females", "Males"),
+         Hunting = if_else(str_detect(Class, "hunted"), "Hunted", "Not hunted")) %>% 
+  ggplot(aes(x = age, y = Survival, colour = Sex, linetype = Hunting)) +
+  geom_line(linewidth = 0.8) +
+  labs(x = "Age",
+       title = "Hunting penalty = 0.1") +
+  scale_linetype_manual(values=c(3, 1)) +
+  scale_x_continuous(limits = c(0, 60), expand = c(0.01, 0)) +
+  scale_y_continuous(limits = c(0, 1), expand = c(0.0, 0)) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+p16 / p17 + plot_layout(guides = "collect")
+```
+
+And finally lets build our main results plot for Model 3, then display it next to the analogous plots from Models 1 and 2
+
+```{r}
+# wrangle into plot friendly format
+p18 <-
+  tibble(hunting_penalty = h,
+         prop_life_lost = LL_100,
+         prop_tuskless_females = as.numeric(Et_100)) %>% 
+  ggplot(aes(x = prop_life_lost,
+             y = prop_tuskless_females)) +
+  geom_line(linewidth = 1) +
+  labs(x = 'Proportion of life lost (of tuskeds)',
+       y = 'Prop. tuskless females',
+       title = "Model 3: 100 years") +
+  scale_x_continuous(limits = c(0, 0.82), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0, 0.8), expand = c(0.0, 0)) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+p19 <-
+  tibble(hunting_penalty = h,
+         prop_life_lost = LL_10000,
+         prop_tuskless_females = as.numeric(Et_10000)) %>% 
+  ggplot(aes(x = prop_life_lost,
+             y = prop_tuskless_females)) +
+  geom_line(linewidth = 1.2, colour = "black") +#, colour = "blue") +
+  labs(x = 'Proportion of life lost (of tuskeds)',
+       y = 'Prop. tuskless females',
+       title = "Summary of the situation after 10000 years") +
+  scale_x_continuous(limits = c(0, 0.82), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0, 0.8), expand = c(0.0, 0)) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5),
+        text = element_text(size = 12))
+
+Model_3_grand_results <- p18 + p19
+```
+
+```{r, fig.width=11, fig.height=8}
+
+p5 / Model_2_grand_results / Model_3_grand_results
+```
+
+
