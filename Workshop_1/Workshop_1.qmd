@@ -152,6 +152,77 @@ bottom <- p3 + p4
 top / bottom
 ```
 
+## Some quick analytics
+
+We can also ask about long term equilibria. Letting  $h$ be hunting rate, $F$ be fecundity, and $s$ be survival, we note that the dynamics of the system are given by
+
+$$
+\begin{equation}
+\begin{bmatrix}
+N_{xX}\\
+N_{XX}
+\end{bmatrix}_{t+1} = \frac{Fs}{2} 
+\begin{bmatrix}
+\frac{1}{2} & 0\\
+\frac{1-h}{4} & 1-h
+\end{bmatrix}
+\begin{bmatrix}
+N_{xX}\\
+N_{XX}
+\end{bmatrix}_{t}
+\end{equation}
+$$
+If the two phenotypes have reached equilibrium frequencies (after a sufficiently large time $t$), we must have $N_{ij}(t+1) = \lambda N_{ij}(t)$, i.e. growth rescales all frequencies equally. Substituting this into our dynamic equation and dropping the $t$ dependence, we obtain
+
+$$
+\begin{equation}
+ \frac{Fs}{2} 
+\begin{bmatrix}
+\frac{1}{2} & 0\\
+\frac{1-h}{4} & 1-h
+\end{bmatrix}
+\begin{bmatrix}
+N_{xX}\\
+N_{XX}
+\end{bmatrix} = \lambda \begin{bmatrix}
+N_{xX}\\
+N_{XX}
+\end{bmatrix}
+\end{equation}
+$$
+We now need to solve the system of equations
+
+$$
+\begin{align}
+ \frac{Fs}{4} N_{xX} &= \lambda N_{xX}\\
+\frac{Fs}{8}(1-h)N_{xX} + \frac{Fs}{2}(1-h)N_{XX} &= \lambda N_{XX}
+\end{align}
+$$
+Assuming $N_{xX} \neq 0$, the first of these equations immediately yields $\lambda = Fs/4$. Thus, the second equation becomes
+$$
+\begin{equation}
+(1-h)\left[\frac{N_{xX}}{4}+N_{XX}\right] =  \frac{N_{XX}}{2}
+\end{equation}
+$$
+
+After some simple algebra, we obtain the relation 
+
+
+$$
+\begin{equation}
+\frac{N_{xX}}{N_{XX}} = \frac{2h-1}{1-h}
+\end{equation}
+$$
+or that the equilibrium frequency $p$ of tuskless females is given by
+
+$$
+\begin{equation}
+p = \frac{N_{xX}}{N_{xX} + N_{XX}} = 2 - \frac{1}{h}
+\end{equation}
+$$
+Note that this is only biologically meaningful (i.e. within $[0,1]$) for $h \geq 1/2$. 
+
+
 ## Plotting the analytics
 
 Using matrix algebra, we just found that when h >= 0.5 then there are $2 - 1/h$ tuskless females for every tusked female at equilibrium (you can think of this as in the distant future). We can plot this like so:
