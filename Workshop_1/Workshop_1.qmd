@@ -69,87 +69,100 @@ library(geomtextpath) # for text in ggplots
 ## Build the model
 
 ```{r}
+selection_model <- function(init_pop, num_gens, lifetime_fecundity, hunting_strength, female_mortality_fraction,male_mortality_fraction){
+  ###############################
+  #moves elephant population forward in time
+  #inputs:
+    #init_pop (int): initial population (equally divided in sex ratio, and females are equally divided among XX and xX)
+    #num_gens (int): number of generations for which to run the model
+    #lifetime_fecundity (int): number of offspring a female elephant makes before death
+    #hunting_strength (float): fraction of individuals that die because they are hunted. (1-h) survive.
+    #mortality_fraction (float): fraction of individuals that die due to intrinsic mortality. (1-mortality_fraction) survive.
+  ##############################
+  
+  
+  F <- lifetime_fecundity
+  lucky_frac <- 1 - hunting_strength
+  sm <- 1 - male_mortality_fraction
+  sf <- 1 - female_mortality_fraction
+  
+  #setup
+  adult_matrix <- matrix(nrow = 3, ncol = num_gens) #the three rows are XY, xX, XX
+  baby_matrix <- matrix(nrow=3, ncol=num_gens)
 
-```
+  rownames(adult_matrix) <- c('XY','xX','XX')
+  rownames(baby_matrix) <- c('XY','xX','XX')
+  
+  #initialize
+  adult_matrix[,1] <- c(init_pop/2,init_pop/4,init_pop/4)
+  #adult_matrix[,1] <- c(round(init_pop/2),1,round(init_pop/2)-1)
+  baby_matrix[,1] <- c(0,0,0)
+  
+  for (t in 2:num_gens){
+    
+    ###############################
+    #reproduction
+    baby_matrix['XY',t] <- F*(adult_matrix['XX',t-1]/2 + adult_matrix['xX',t-1]/4)
+    baby_matrix['XX',t] <- F*(adult_matrix['XX',t-1]/2 + adult_matrix['xX',t-1]/4)
+    baby_matrix['xX',t] <- F*(adult_matrix['xX',t-1]/4)
+    
+    
+    #survival
+    adult_matrix['XY',t] <- sm*baby_matrix['XY',t] 
+    adult_matrix['XX',t] <- sf*lucky_frac*baby_matrix['XX',t]
+    adult_matrix['xX',t] <-  sf*baby_matrix['xX',t]
+  }
 
-## Plot the results
+  plot_data <- data.frame(t(adult_matrix))
+  plot_data <- cbind(seq(1:num_gens),plot_data)
+  
+  plot_data %>% mutate(tuskless_freq = xX/(xX+XX)) -> plot_data
+  
+  colnames(plot_data)[1] <- 'generation'
+    
+  return (list(baby_matrix, adult_matrix,plot_data))
+}
 
-When you're happy with the matrix called `N`, plug it into the below code to create the `plotting_data` object, a version of the data amenable for plotting.
+num_gens <- 50
 
-**The prettiest ggplot challenge**
+out <- selection_model(init_pop = 10, num_gens = num_gens, lifetime_fecundity = 6, hunting_strength = 0.55, male_mortality_fraction = 0.2,female_mortality_fraction=0.2)
 
-There will be a prize!
+plot_data <- out[[3]]
 
-```{r}
-# ggplot doesn't play nice with matrices, so we need to wrangle the data into a plottable format.
+#########
+#plotting
+p <- ggplot(plot_data,aes(x=generation)) + geom_point(size=2,aes(y=XX,color='tusked')) + geom_point(size=2,aes(y=xX,color='tuskless'))
 
-plotting_data <- 
-  N %>% # you can run these lines step by step to see what each does
-  as.data.frame() %>% 
-  as_tibble() %>% 
-  rownames_to_column() %>% 
-  pivot_longer(-rowname) %>% 
-  rename(Genotype = rowname,
-         Generation = name,
-         N_adults = value) %>% 
-  mutate(Genotype = case_when(Genotype == 1 ~ "xX",
-                              Genotype == 2 ~ "XX",
-                              Genotype == 3 ~ "XY"),
-         Generation = as.numeric(str_remove(Generation, "V")))
+#aesthetics
+p <- p + ylab('Population Size') + xlab("Time (generations)")
+p <- p + coord_cartesian(clip = 'off') + theme(plot.margin = unit(c(5,1,1,1), "lines")) + theme_light()
+p <- p + theme(panel.border = element_blank(), axis.line = element_line(colour = "black"), panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+p <- p + theme(axis.text = element_text(face = 'bold', color = 'black',size = 15))
+p <- p + theme(axis.title = element_text(face = 'bold',color = 'black',size = 15))
+p <- p + theme(legend.title = element_text(face = 'bold',color = 'black',size = 20))
+p <- p + theme(legend.text = element_text(face = 'bold',color = 'black',size = 10))
+p <- p + theme(title = element_text(face = 'bold',color = 'black',size = 10))
+p <- p + theme(axis.ticks.length = unit(.15, "cm")) + theme(axis.ticks = element_line(color='black',linewidth=0.5))
+p <- p + scale_color_manual(values = c('#0000ff','#ff0000'))
+p <- p + theme(legend.title=element_blank())
+p
 
-# your very pretty ggplot goes here
-```
+######################
+#plot frequency
+freq_plot <- ggplot(plot_data,aes(x=generation,y=tuskless_freq)) + geom_point(size=2,color='red') + geom_line(color='red')
 
-Here's Tom's attempt
-
-```{r}
-p1 <-
-  plotting_data %>% 
-  filter(Genotype != "XY") %>% # if male survival = female survival there's no need to plot XY
-  ggplot(aes(x = Generation, y = N_adults, colour = Genotype)) +
-  geom_point(size = 2.5) +
-  labs(y = "Number of adults") +
-  theme_bw()
-
-p2 <-
-  plotting_data %>% 
-  filter(Genotype != "XY") %>% # if male survival = female survival there's no need to plot XY
-  ggplot(aes(x = Generation, y = log(N_adults), colour = Genotype)) +
-  geom_point(size = 2.5) +
-  labs(y = "log(Number of adults)") +
-  theme_bw()
-
-p3 <-
-  plotting_data %>% 
-  # More wrangling needed - make each genotype into a column  
-  pivot_wider(names_from = "Genotype", values_from = "N_adults") %>% 
-  # calc prop tuskless
-  mutate(prop_tuskless_females = xX / (XX + xX)) %>% 
-  # plot
-  ggplot(aes(x = Generation, y = prop_tuskless_females)) +
-  geom_point(size = 2.5) +
-  scale_y_continuous(limits = c(0, 1)) +
-  labs(y = "Prop. tuskless females") +
-  theme_bw()
-
-p4 <-
-  plotting_data %>% 
-  # More wrangling needed - make each genotype into a column  
-  pivot_wider(names_from = "Genotype", values_from = "N_adults") %>% 
-  # calc prop tuskless
-  mutate(prop_x = (xX / 2) / ((xX / 2) + XX + (XY / 2))) %>% 
-  # plot
-  ggplot(aes(x = Generation, y = prop_x)) +
-  geom_point(size = 2.5) +
-  scale_y_continuous(limits = c(0, 1)) +
-  labs(y = "Prop. mutant x") +
-  theme_bw()
-
-top <- (p1 + p2) + plot_layout(guides = "collect")
-
-bottom <- p3 + p4
-
-top / bottom
+#aesthetics
+freq_plot <- freq_plot + ylab('Frequency of\ntuskless females') + xlab("Time (generations)")
+freq_plot <- freq_plot + coord_cartesian(clip = 'off') + theme(plot.margin = unit(c(5,1,1,1), "lines")) + theme_light()
+freq_plot <- freq_plot + theme(panel.border = element_blank(), axis.line = element_line(colour = "black"), panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+freq_plot <- freq_plot + theme(axis.text = element_text(face = 'bold', color = 'black',size = 15))
+freq_plot <- freq_plot + theme(axis.title = element_text(face = 'bold',color = 'black',size = 15))
+freq_plot <- freq_plot + theme(legend.title = element_text(face = 'bold',color = 'black',size = 20))
+freq_plot <- freq_plot + theme(legend.text = element_text(face = 'bold',color = 'black',size = 10))
+freq_plot <- freq_plot + theme(title = element_text(face = 'bold',color = 'black',size = 10))
+freq_plot <- freq_plot + theme(axis.ticks.length = unit(.15, "cm")) + theme(axis.ticks = element_line(color='black',linewidth=0.5))
+freq_plot <- freq_plot + ylim(c(0,1))
+freq_plot
 ```
 
 ## Some quick analytics
@@ -225,26 +238,34 @@ Note that this is only biologically meaningful (i.e. within $[0,1]$) for $h \geq
 
 ## Plotting the analytics
 
-Using matrix algebra, we just found that when h >= 0.5 then there are $2 - 1/h$ tuskless females for every tusked female at equilibrium (you can think of this as in the distant future). We can plot this like so:
+We can now plot this curve:
 
 ```{r}
-# wrangle
-p5 <-
+eq_freq_plot <-
 tibble(prop_life_lost = seq(from = 0.5, to = 1, length.out = 500)) %>% 
   mutate(prop_tuskless_females = 2 - 1/prop_life_lost) %>% 
   # plot
   ggplot(aes(x = prop_life_lost,
              y = prop_tuskless_females)) +
-  geom_line(linewidth = 1) +
-  labs(x = 'Proportion of life lost (of tuskeds)',
-       y = 'Prop. tuskless females',
-       title = "Model 1: far future") +
+  geom_line(linewidth = 1,color='red') +
+  labs(x = 'Hunting rate (h)',
+       y = 'Equilibrium frequency\nof tuskless females',
+       title = "") +
   scale_x_continuous(limits = c(0, 1.01), expand = c(0, 0)) +
   scale_y_continuous(limits = c(0, 1), expand = c(0.0, 0)) +
   theme_bw() +
   theme(plot.title = element_text(hjust = 0.5))
   
-p5
+eq_freq_plot <- eq_freq_plot + coord_cartesian(clip = 'off') + theme(plot.margin = unit(c(5,1,1,1), "lines")) + theme_light()
+eq_freq_plot <- eq_freq_plot + theme(panel.border = element_blank(), axis.line = element_line(colour = "black"), panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+eq_freq_plot <- eq_freq_plot + theme(axis.text = element_text(face = 'bold', color = 'black',size = 15))
+eq_freq_plot <- eq_freq_plot + theme(axis.title = element_text(face = 'bold',color = 'black',size = 15))
+eq_freq_plot <- eq_freq_plot + theme(legend.title = element_text(face = 'bold',color = 'black',size = 20))
+eq_freq_plot <- eq_freq_plot + theme(legend.text = element_text(face = 'bold',color = 'black',size = 10))
+eq_freq_plot <- eq_freq_plot + theme(title = element_text(face = 'bold',color = 'black',size = 10))
+eq_freq_plot <- eq_freq_plot + theme(axis.ticks.length = unit(.15, "cm")) + theme(axis.ticks = element_line(color='black',linewidth=0.5))
+
+eq_freq_plot
 ```
 
 
