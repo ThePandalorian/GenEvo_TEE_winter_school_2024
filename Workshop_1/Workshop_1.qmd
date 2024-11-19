@@ -177,7 +177,7 @@ N_{XX}
 \end{bmatrix}_{t+1} = \frac{Fs}{2} 
 \begin{bmatrix}
 \frac{1}{2} & 0\\
-\frac{1-h}{4} & 1-h
+\frac{1-h}{2} & 1-h
 \end{bmatrix}
 \begin{bmatrix}
 N_{xX}\\
@@ -192,7 +192,7 @@ $$
  \frac{Fs}{2} 
 \begin{bmatrix}
 \frac{1}{2} & 0\\
-\frac{1-h}{4} & 1-h
+\frac{1-h}{2} & 1-h
 \end{bmatrix}
 \begin{bmatrix}
 N_{xX}\\
@@ -208,13 +208,13 @@ We now need to solve the system of equations
 $$
 \begin{align}
  \frac{Fs}{4} N_{xX} &= \lambda N_{xX}\\
-\frac{Fs}{8}(1-h)N_{xX} + \frac{Fs}{2}(1-h)N_{XX} &= \lambda N_{XX}
+\frac{Fs}{4}(1-h)N_{xX} + \frac{Fs}{2}(1-h)N_{XX} &= \lambda N_{XX}
 \end{align}
 $$
 Assuming $N_{xX} \neq 0$, the first of these equations immediately yields $\lambda = Fs/4$. Thus, the second equation becomes
 $$
 \begin{equation}
-(1-h)\left[\frac{N_{xX}}{4}+N_{XX}\right] =  \frac{N_{XX}}{2}
+(1-h)\left[N_{xX}+2N_{XX}\right] =  N_{XX}
 \end{equation}
 $$
 
